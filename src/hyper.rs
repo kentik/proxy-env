@@ -19,7 +19,7 @@ use std::error::Error;
 
 use hyper_dep::client::HttpConnector;
 use hyper_proxy::{Proxy, ProxyConnector};
-use hyper_tls::HttpsConnector;
+use hyper_rustls::{HttpsConnector, HttpsConnectorBuilder};
 
 use crate::proxy::PROXY_CONFIG;
 
@@ -31,7 +31,14 @@ pub type Connector = ProxyConnector<HttpsConnector<HttpConnector>>;
 /// For details about the system proxy configuration, see the
 /// [crate documentation](crate).
 pub fn connector() -> Result<Connector, Box<dyn Error + Send + Sync>> {
-    let mut connector = ProxyConnector::new(HttpsConnector::new())?;
+    let https = HttpsConnectorBuilder::new()
+        .with_native_roots()
+        .https_or_http()
+        .enable_http1()
+        .enable_http2()
+        .build();
+
+    let mut connector = ProxyConnector::new(https)?;
 
     if let Some(http_proxy) = PROXY_CONFIG.http_proxy() {
         let matches = move |scheme: Option<&str>, host: Option<&str>, port| {
